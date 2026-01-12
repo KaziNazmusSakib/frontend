@@ -1,126 +1,120 @@
 // app/buyer/login/page.tsx
 "use client";
-import { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import toast from 'react-hot-toast'
-import { authAPI } from '@/lib/api'
-import { useAuth } from '@/hooks/useAuth'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-})
+export default function BuyerLogin() {
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-type LoginFormData = z.infer<typeof loginSchema>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
 
-export default function BuyerLoginPage() {
-  const router = useRouter()
-  const { login } = useAuth()
-  const [loading, setLoading] = useState(false)
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  })
-
-  const onSubmit = async (data: LoginFormData) => {
-    setLoading(true)
-    try {
-      const response = await authAPI.buyer.login(data)
-      
-      if (response.data.access_token) {
-        login(response.data.access_token, 'buyer', response.data.buyer)
-        toast.success('Login successful!')
-        router.push('/buyer/dashboard')
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Login failed')
-    } finally {
-      setLoading(false)
+    if (!formData.email || !formData.password) {
+      setError('All fields are required');
+      return;
     }
-  }
+
+    setLoading(true);
+
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/buyer/login`,
+        formData
+      );
+
+      if (response.data.access_token) {
+        localStorage.setItem('token', response.data.access_token);
+        localStorage.setItem('userType', 'buyer');
+        localStorage.setItem('email', formData.email);
+        router.push('/buyer/dashboard');
+      }
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message || 'Invalid email or password'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-50 to-purple-50 p-4">
+      <div className="card w-full max-w-md bg-white shadow-2xl rounded-2xl">
+        <div className="card-body p-8">
+          <h2 className="text-3xl font-bold text-center text-primary mb-6">
             Buyer Login
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to your buyer account
-          </p>
-        </div>
-        
-        <div className="card bg-white shadow-2xl rounded-2xl">
-          <div className="card-body p-8">
-            <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text font-semibold">Email address</span>
-                </label>
-                <input
-                  type="email"
-                  {...register('email')}
-                  className={`input input-bordered w-full ${errors.email ? 'input-error' : ''}`}
-                  placeholder="Enter your email"
-                  disabled={loading}
-                />
-                {errors.email && (
-                  <span className="text-error text-sm mt-1">{errors.email.message}</span>
-                )}
-              </div>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text font-semibold">Password</span>
-                  <Link href="/forgot-password" className="label-text-alt link link-hover">
-                    Forgot password?
-                  </Link>
-                </label>
-                <input
-                  type="password"
-                  {...register('password')}
-                  className={`input input-bordered w-full ${errors.password ? 'input-error' : ''}`}
-                  placeholder="Enter your password"
-                  disabled={loading}
-                />
-                {errors.password && (
-                  <span className="text-error text-sm mt-1">{errors.password.message}</span>
-                )}
-              </div>
-
-              <div className="form-control">
-                <button
-                  type="submit"
-                  className={`btn btn-primary w-full ${loading ? 'loading' : ''}`}
-                  disabled={loading}
-                >
-                  {loading ? 'Signing in...' : 'Sign in'}
-                </button>
-              </div>
-            </form>
-
-            <div className="divider">OR</div>
-
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
-                <Link href="/buyer/register" className="font-medium text-primary hover:text-primary/80">
-                  Sign up here
-                </Link>
-              </p>
+          {error && (
+            <div className="alert alert-error mb-4">
+              <span>{error}</span>
             </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">Email</span>
+              </label>
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="input input-bordered input-primary w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+              />
+            </div>
+
+            {/* Password */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">Password</span>
+              </label>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                className="input input-bordered input-primary w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+              />
+            </div>
+
+            {/* Button */}
+            <div className="form-control mt-6">
+              <button
+                type="submit"
+                className={`btn btn-primary w-full ${loading ? 'loading' : ''}`}
+                disabled={loading}
+              >
+                {loading ? 'Logging in...' : 'Login'}
+              </button>
+            </div>
+          </form>
+
+          {/* Footer */}
+          <div className="text-center mt-6">
+            <span className="text-sm text-gray-500 mr-1">
+              Don't have an account?
+            </span>
+            <a
+              href="/buyer/register"
+              className="link link-primary font-semibold"
+            >
+              Register
+            </a>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
