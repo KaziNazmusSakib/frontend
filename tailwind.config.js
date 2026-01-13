@@ -19,25 +19,7 @@ module.exports = {
     require("daisyui"),
   ],
   daisyui: {
-    themes: [
-      {
-        light: {
-          "primary": "#3b82f6",
-          "secondary": "#10b981",
-          "accent": "#f59e0b",
-          "neutral": "#1f2937",
-          "base-100": "#ffffff",
-          "info": "#0ea5e9",
-          "success": "#10b981",
-          "warning": "#f59e0b",
-          "error": "#ef4444",
-        },
-      },
-      "dark",
-
-      "cupcake"
-    ], 
-    // ["light", "dark", "cupcake"], // enable DaisyUI themes
+    themes:  ["light", "dark", "cupcake"], // enable DaisyUI themes
   },
 };
 
