@@ -26,6 +26,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 } */
 
+ 
 
 @tailwind base;
 @tailwind components;
@@ -44,6 +45,3 @@ body {
     Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
     sans-serif;
 }
-
-
- 
