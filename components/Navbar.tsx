@@ -1,73 +1,52 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from './AuthProvider';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
 
 export default function Navbar() {
-  const { token, logout, user } = useAuth();
-  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, logout, isLoading } = useAuth();
 
-  const isActive = (path: string) => pathname === path;
+  const navLinks = [
+    { href: '/', label: '🏠 Home' },
+    { href: '/products', label: '🛍️ Products' },
+    { href: '/category', label: '📂 Categories' },
+    { href: '/orders', label: '📦 Orders' },
+    { href: '/cart', label: '🛒 Cart' },
+  ];
+
+  const userLinks = [
+    { href: '/dashboard', label: '📊 Dashboard' },
+    { href: '/profile', label: '👤 Profile' },
+    { href: '/notifications', label: '🔔 Notifications' },
+  ];
 
   return (
-    <div className="navbar bg-base-100 fixed top-0 z-50 shadow-lg">
+    <div className="navbar bg-base-100 shadow-lg sticky top-0 z-50">
       <div className="navbar-start">
         <div className="dropdown">
-          <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 6h16M4 12h8m-8 6h16"
-              />
-            </svg>
-          </div>
-          <ul
+          <div
             tabIndex={0}
-            className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+            role="button"
+            className="btn btn-ghost lg:hidden"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            <li>
-              <Link href="/" className={isActive('/') ? 'active' : ''}>
-                Home
-              </Link>
-            </li>
-            <li>
-              <Link href="/products" className={isActive('/products') ? 'active' : ''}>
-                Products
-              </Link>
-            </li>
-            <li>
-              <Link href="/cart" className={isActive('/cart') ? 'active' : ''}>
-                Cart
-              </Link>
-            </li>
-            {token && (
-              <>
-                <li>
-                  <Link href="/dashboard" className={isActive('/dashboard') ? 'active' : ''}>
-                    Dashboard
-                  </Link>
+            {isMenuOpen ? '✖️' : '☰'}
+          </div>
+          {isMenuOpen && (
+            <ul
+              tabIndex={0}
+              className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              {navLinks.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href}>{link.label}</Link>
                 </li>
-                {user?.role === 'admin' && (
-                  <li>
-                    <Link href="/admin" className={isActive('/admin') ? 'active' : ''}>
-                      Admin
-                    </Link>
-                  </li>
-                )}
-              </>
-            )}
-          </ul>
+              ))}
+            </ul>
+          )}
         </div>
         <Link href="/" className="btn btn-ghost text-xl">
           🛒 Nexify Store
@@ -76,78 +55,79 @@ export default function Navbar() {
 
       <div className="navbar-center hidden lg:flex">
         <ul className="menu menu-horizontal px-1">
-          <li>
-            <Link href="/" className={isActive('/') ? 'active' : ''}>
-              Home
-            </Link>
-          </li>
-          <li>
-            <Link href="/products" className={isActive('/products') ? 'active' : ''}>
-              Products
-            </Link>
-          </li>
-          <li>
-            <Link href="/cart" className={isActive('/cart') ? 'active' : ''}>
-              Cart
-            </Link>
-          </li>
-          {token && (
-            <>
-              <li>
-                <Link href="/dashboard" className={isActive('/dashboard') ? 'active' : ''}>
-                  Dashboard
-                </Link>
-              </li>
-              {user?.role === 'admin' && (
-                <li>
-                  <Link href="/admin" className={isActive('/admin') ? 'active' : ''}>
-                    Admin
-                  </Link>
-                </li>
-              )}
-            </>
-          )}
+          {navLinks.map((link) => (
+            <li key={link.href}>
+              <Link href={link.href}>{link.label}</Link>
+            </li>
+          ))}
         </ul>
       </div>
 
-      <div className="navbar-end">
-        {token ? (
-          <div className="dropdown dropdown-end">
-            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
-              <div className="w-10 rounded-full bg-primary text-white flex items-center justify-center">
-                <span className="font-bold">{user?.name?.charAt(0) || 'U'}</span>
-              </div>
+      <div className="navbar-end space-x-2">
+        <div className="hidden md:flex">
+          <div className="join">
+            <input
+              type="text"
+              placeholder="Search..."
+              className="input input-bordered join-item"
+            />
+            <button className="btn join-item">
+              🔍
+            </button>
+          </div>
+        </div>
+
+        <Link href="/cart" className="btn btn-ghost btn-circle">
+          <div className="indicator">
+            <span className="text-xl">🛒</span>
+            <span className="badge badge-sm indicator-item">3</span>
+          </div>
+        </Link>
+
+        <div className="dropdown dropdown-end">
+          <div
+            tabIndex={0}
+            role="button"
+            className="btn btn-ghost btn-circle avatar"
+          >
+            <div className="w-10 rounded-full bg-neutral text-neutral-content flex items-center justify-center">
+              {user ? (
+                <span className="text-lg">{user.name.charAt(0)}</span>
+              ) : (
+                <span className="text-xl">👤</span>
+              )}
             </div>
-            <ul
-              tabIndex={0}
-              className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
-            >
-              <li>
-                <Link href="/dashboard" className="justify-between">
-                  Profile
-                  <span className="badge badge-primary">New</span>
-                </Link>
-              </li>
-              <li>
-                <Link href="/orders">Orders</Link>
-              </li>
-              <li>
-                <button onClick={logout} className="text-error">
-                  Logout
-                </button>
-              </li>
-            </ul>
           </div>
-        ) : (
-          <div className="flex gap-2">
-            <Link href="/login" className="btn btn-primary">
-              Login
-            </Link>
-            <Link href="/register" className="btn btn-outline">
-              Register
-            </Link>
-          </div>
-        )}
+          <ul
+            tabIndex={0}
+            className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+          >
+            {user ? (
+              <>
+                <li className="menu-title">
+                  <span>Hi, {user.name}</span>
+                </li>
+                {userLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href}>{link.label}</Link>
+                  </li>
+                ))}
+                <li>
+                  <button onClick={() => logout()}>🚪 Logout</button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <Link href="/auth/login">🔑 Login</Link>
+                </li>
+                <li>
+                  <Link href="/auth/register">📝 Register</Link>
+                </li>
+              </>
+            )}
+          </ul>
+        </div>
       </div>
     </div>
   );

@@ -1,84 +1,123 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getAuthToken, removeAuthToken, setAuthToken } from '@/lib/auth';
-import axiosClient from '@/lib/axiosClient';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import axiosClient from '@/lib/axiosClient';
 
 interface User {
   id: number;
   name: string;
   email: string;
-  role: string;
+  role: 'admin' | 'buyer' | 'seller' | 'supplier';
+  createdAt: string;
 }
 
 interface AuthContextType {
-  token: string | null;
   user: User | null;
-  setToken: (token: string | null) => void;
-  setUser: (user: User | null) => void;
-  logout: () => void;
+  token: string | null;
   isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (data: any) => Promise<void>;
+  logout: () => Promise<void>;
+  checkAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [token, setTokenState] = useState<string | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  const setToken = (newToken: string | null) => {
-    if (newToken) {
-      setAuthToken(newToken);
-      setTokenState(newToken);
-      fetchUserProfile();
-    } else {
-      removeAuthToken();
-      setTokenState(null);
-      setUser(null);
-    }
-  };
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
-  const fetchUserProfile = async () => {
+  const checkAuth = async () => {
     try {
-      const response = await axiosClient.get('/auth/profile');
-      setUser(response.data);
+      const storedToken = localStorage.getItem('token');
+      if (storedToken) {
+        setToken(storedToken);
+        const response = await axiosClient.get('/auth/profile', {
+          headers: { Authorization: `Bearer ${storedToken}` },
+        });
+        setUser(response.data);
+      }
     } catch (error) {
-      console.error('Failed to fetch user profile:', error);
+      setUser(null);
       setToken(null);
+      localStorage.removeItem('token');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setToken(null);
-    router.push('/login');
-  };
-
-  useEffect(() => {
-    const storedToken = getAuthToken();
-    if (storedToken) {
-      setTokenState(storedToken);
-      fetchUserProfile();
-    } else {
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const response = await axiosClient.post('/auth/login', { email, password });
+      const { user: userData, token: authToken } = response.data;
+      
+      setUser(userData);
+      setToken(authToken);
+      localStorage.setItem('token', authToken);
+    } catch (error: any) {
+      throw error;
+    } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
+
+  const register = async (data: any) => {
+    setIsLoading(true);
+    try {
+      const response = await axiosClient.post('/auth/register', data);
+      const { user: userData, token: authToken } = response.data;
+      
+      setUser(userData);
+      setToken(authToken);
+      localStorage.setItem('token', authToken);
+    } catch (error: any) {
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await axiosClient.post('/auth/logout');
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('token');
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ token, user, setToken, setUser, logout, isLoading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isLoading,
+        login,
+        register,
+        logout,
+        checkAuth,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}
