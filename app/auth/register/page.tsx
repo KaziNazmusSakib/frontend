@@ -8,16 +8,15 @@ import axiosClient from '@/lib/axiosClient';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-// ✅ Add role to the type definition
 type RegisterFormData = {
   name: string;
   email: string;
   password: string;
   confirmPassword: string;
-  role: 'buyer' | 'seller' | 'supplier'; // ← Add this line
+  role: 'buyer' | 'seller' | 'supplier';
 };
 
-export default function BuyerRegisterPage() {
+export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +31,7 @@ export default function BuyerRegisterPage() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      role: 'buyer', // ← Set default value for role
+      role: 'buyer',
     },
   });
 
@@ -41,11 +40,10 @@ export default function BuyerRegisterPage() {
     setError('');
     setSuccess('');
     try {
-      // ✅ Now data includes the role field
       await axiosClient.post('/auth/register', data);
       setSuccess('Registration successful! Redirecting to login...');
       setTimeout(() => {
-        router.push('/buyer/login');
+        router.push('/auth/login');
       }, 2000);
     } catch (error: any) {
       setError(error.response?.data?.message || 'Registration failed. Please try again.');
@@ -61,7 +59,7 @@ export default function BuyerRegisterPage() {
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body">
           <h2 className="card-title text-2xl mb-6">
-            👤 Register as Buyer
+            📝 Create Account
           </h2>
 
           {error && (
@@ -102,7 +100,7 @@ export default function BuyerRegisterPage() {
               </label>
               <input
                 type="email"
-                placeholder="buyer@example.com"
+                placeholder="you@example.com"
                 className={`input input-bordered ${errors.email ? 'input-error' : ''}`}
                 {...register('email')}
               />
@@ -115,8 +113,19 @@ export default function BuyerRegisterPage() {
               )}
             </div>
 
-            {/* ✅ Add a hidden input for role */}
-            <input type="hidden" {...register('role')} value="buyer" />
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Account Type</span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                {...register('role')}
+              >
+                <option value="buyer">👤 Buyer</option>
+                <option value="seller">🏪 Seller</option>
+                <option value="supplier">🚚 Supplier</option>
+              </select>
+            </div>
 
             <div className="form-control">
               <label className="label">
@@ -178,7 +187,7 @@ export default function BuyerRegisterPage() {
                 className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating account...' : 'Register as Buyer'}
+                {isLoading ? 'Creating account...' : 'Register'}
               </button>
             </div>
           </form>
@@ -187,11 +196,8 @@ export default function BuyerRegisterPage() {
 
           <div className="text-center">
             <p className="mb-4">Already have an account?</p>
-            <Link href="/buyer/login" className="btn btn-outline btn-block">
-              Login as Buyer
-            </Link>
-            <Link href="/auth/login" className="btn btn-ghost btn-block mt-2">
-              Login as Other Role
+            <Link href="/auth/login" className="btn btn-outline btn-block">
+              Login
             </Link>
           </div>
 

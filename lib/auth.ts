@@ -1,34 +1,40 @@
-import Cookies from 'js-cookie';
-
-export const setAuthToken = (token: string) => {
-  Cookies.set('token', token, { expires: 1, secure: true, sameSite: 'strict' });
-};
-
-export const getAuthToken = () => {
-  return Cookies.get('token');
-};
-
-export const removeAuthToken = () => {
-  Cookies.remove('token');
-};
-
-export const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
-export const isAuthenticated = () => {
-  return !!getAuthToken();
-};
-
-export const getUserRole = () => {
-  const token = getAuthToken();
-  if (!token) return null;
-  
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.role;
-  } catch {
-    return null;
+export function setAuthToken(token: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('token', token);
   }
-};
+}
+
+export function getAuthToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('token');
+  }
+  return null;
+}
+
+export function clearAuthToken(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  }
+}
+
+export function isAuthenticated(): boolean {
+  if (typeof window !== 'undefined') {
+    return !!localStorage.getItem('token');
+  }
+  return false;
+}
+
+export function setUserData(user: any): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('user', JSON.stringify(user));
+  }
+}
+
+export function getUserData(): any {
+  if (typeof window !== 'undefined') {
+    const userData = localStorage.getItem('user');
+    return userData ? JSON.parse(userData) : null;
+  }
+  return null;
+}
