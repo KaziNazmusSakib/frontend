@@ -1,131 +1,84 @@
-// components/AuthProvider.tsx
-"use client";
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+'use client';
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getAuthToken, removeAuthToken, setAuthToken } from '@/lib/auth';
+import axiosClient from '@/lib/axiosClient';
+import { useRouter } from 'next/navigation';
 
 interface User {
-  id: number
-  email: string
-  name: string
-  role: string
-  [key: string]: any
+  id: number;
+  name: string;
+  email: string;
+  role: string;
 }
 
 interface AuthContextType {
-  user: User | null
-  isAuthenticated: boolean
-  login: (token: string, role: string, userData: any) => void
-  logout: () => void
-  loading: boolean
+  token: string | null;
+  user: User | null;
+  setToken: (token: string | null) => void;
+  setUser: (user: User | null) => void;
+  logout: () => void;
+  isLoading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [token, setTokenState] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
-export default function AuthProvider({ children }: { children: ReactNode }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    // Check for stored auth data
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('userData')
-    const userRole = localStorage.getItem('userRole')
-
-    if (token && userData && userRole) {
-      try {
-        const parsedUser = JSON.parse(userData)
-        setUser({ ...parsedUser, role: userRole })
-      } catch (error) {
-        logout()
-      }
+  const setToken = (newToken: string | null) => {
+    if (newToken) {
+      setAuthToken(newToken);
+      setTokenState(newToken);
+      fetchUserProfile();
+    } else {
+      removeAuthToken();
+      setTokenState(null);
+      setUser(null);
     }
-    setLoading(false)
-  }, [])
+  };
 
-  useEffect(() => {
-    // Protect routes based on authentication
-    if (loading) return
-
-    const protectedRoutes = [
-      '/buyer/dashboard',
-      '/seller/dashboard',
-      '/supplier/dashboard',
-      '/admin/dashboard',
-    ]
-
-    const roleBasedRoutes = {
-      '/buyer': 'buyer',
-      '/seller': 'seller',
-      '/supplier': 'supplier',
-      '/admin': ['admin', 'super-admin'],
+  const fetchUserProfile = async () => {
+    try {
+      const response = await axiosClient.get('/auth/profile');
+      setUser(response.data);
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+      setToken(null);
+    } finally {
+      setIsLoading(false);
     }
-
-    const currentRoute = pathname
-
-    // Check if route is protected
-    if (protectedRoutes.includes(currentRoute) && !user) {
-      router.push('/')
-      return
-    }
-
-    // Check role-based access
-    for (const [route, allowedRoles] of Object.entries(roleBasedRoutes)) {
-      if (currentRoute.startsWith(route)) {
-        if (!user || !allowedRoles.includes(user.role)) {
-          router.push('/')
-          return
-        }
-      }
-    }
-
-    // Redirect authenticated users away from login/register pages
-    const authPages = [
-      '/buyer/login',
-      '/buyer/register',
-      '/seller/login',
-      '/seller/register',
-      '/supplier/login',
-      '/supplier/register',
-      '/admin/login',
-    ]
-
-    if (user && authPages.includes(currentRoute)) {
-      router.push(`/${user.role}/dashboard`)
-    }
-  }, [pathname, user, loading, router])
-
-  const login = (token: string, role: string, userData: any) => {
-    localStorage.setItem('token', token)
-    localStorage.setItem('userRole', role)
-    localStorage.setItem('userData', JSON.stringify(userData))
-    setUser({ ...userData, role })
-  }
+  };
 
   const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('userRole')
-    localStorage.removeItem('userData')
-    setUser(null)
-    router.push('/')
-  }
+    setToken(null);
+    router.push('/login');
+  };
 
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    login,
-    logout,
-    loading,
-  }
+  useEffect(() => {
+    const storedToken = getAuthToken();
+    if (storedToken) {
+      setTokenState(storedToken);
+      fetchUserProfile();
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
+  return (
+    <AuthContext.Provider value={{ token, user, setToken, setUser, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
